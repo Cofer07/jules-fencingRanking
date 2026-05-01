@@ -82,8 +82,22 @@ export async function POST(req: Request) {
         normalizedGender = 'M'
       }
 
-      const rawClub = r.club || r['Club'] || null
-      const normalizedClub = normalizeClubName(rawClub)
+      // r.mappedClub is provided by the frontend interactive matching.
+      // If the frontend didn't provide mappedClub (e.g., API hit directly), fallback to old mapping logic
+      let normalizedClub = r.mappedClub 
+      if (!normalizedClub) {
+        const rawClub = r.club || r['Club'] || null
+        normalizedClub = normalizeClubName(rawClub)
+      }
+
+      // If mappedClub is new and not in the DB, it should be added to the Club model
+      if (normalizedClub) {
+        await prisma.club.upsert({
+          where: { name: normalizedClub },
+          update: {}, // don't overwrite if it exists
+          create: { name: normalizedClub }
+        })
+      }
 
       const fencer = await prisma.fencer.upsert({
         where: { id: fencerId },

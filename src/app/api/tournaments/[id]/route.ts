@@ -36,3 +36,18 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to fetch tournament' }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await context.params
+    await prisma.tournament.delete({
+      where: { id: params.id }
+    })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to delete tournament' }, { status: 500 })
+  }
+}

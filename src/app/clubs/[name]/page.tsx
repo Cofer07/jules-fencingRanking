@@ -3,44 +3,130 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Users, Trophy, Target } from 'lucide-react'
+import { ChevronLeft, Users, Trophy, Target, Settings, MapPin, Mail, Globe } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 export default function ClubProfile() {
   const { name } = useParams()
   const decodedName = decodeURIComponent(name as string)
+  const { data: session } = useSession()
   const [club, setClub] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  // Edit State
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ location: '', email: '', website: '', logoUrl: '', lat: '', lng: '' })
+
+  const loadClub = () => {
     fetch(`/api/clubs/${encodeURIComponent(decodedName)}`)
       .then(res => res.json())
       .then(data => {
         setClub(data)
+        setEditForm({
+          location: data.location || '',
+          email: data.email || '',
+          website: data.website || '',
+          logoUrl: data.logoUrl || '',
+          lat: data.lat || '',
+          lng: data.lng || ''
+        })
         setLoading(false)
       })
       .catch(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadClub()
   }, [decodedName])
+
+  const handleSave = async () => {
+    try {
+      const res = await fetch(`/api/clubs/${encodeURIComponent(decodedName)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      })
+      if (res.ok) {
+        setIsEditing(false)
+        loadClub()
+      } else {
+        alert('Failed to update club profile.')
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const canEdit = session?.user?.role === 'ADMIN' || club?.ownerId === session?.user?.id
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading club details...</div>
   if (!club || club.error) return <div className="p-8 text-center text-red-500">Club not found.</div>
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <Link href="/rankings" className="inline-flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-        <ChevronLeft className="w-4 h-4 mr-1" /> Back to Rankings
-      </Link>
+      <div className="flex justify-between items-center">
+        <Link href="/rankings" className="inline-flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+          <ChevronLeft className="w-4 h-4 mr-1" /> Back to Rankings
+        </Link>
+        {canEdit && (
+          <button 
+            onClick={() => setIsEditing(!isEditing)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            {isEditing ? 'Cancel Edit' : 'Edit Profile'}
+          </button>
+        )}
+      </div>
+
+      {isEditing && (
+        <div className="bg-gray-50 dark:bg-gray-900 border dark:border-gray-800 rounded-3xl p-8 space-y-4 animate-in slide-in-from-top-4">
+          <h2 className="text-xl font-bold mb-4">Edit Club Details</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <input className="bg-white dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 outline-none" placeholder="Location (e.g., Fredericton, NB)" value={editForm.location} onChange={e => setEditForm({...editForm, location: e.target.value})} />
+            <input className="bg-white dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 outline-none" placeholder="Email Contact" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} />
+            <input className="bg-white dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 outline-none" placeholder="Website URL" value={editForm.website} onChange={e => setEditForm({...editForm, website: e.target.value})} />
+            <input className="bg-white dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 outline-none" placeholder="Logo Image URL" value={editForm.logoUrl} onChange={e => setEditForm({...editForm, logoUrl: e.target.value})} />
+            <input className="bg-white dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 outline-none" placeholder="Latitude (for Map)" type="number" step="0.0001" value={editForm.lat} onChange={e => setEditForm({...editForm, lat: e.target.value})} />
+            <input className="bg-white dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 outline-none" placeholder="Longitude (for Map)" type="number" step="0.0001" value={editForm.lng} onChange={e => setEditForm({...editForm, lng: e.target.value})} />
+          </div>
+          <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors mt-4">Save Changes</button>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border dark:border-gray-800 p-8 flex flex-col md:flex-row justify-between items-center gap-8">
-        <div>
-          <h1 className="text-4xl font-black tracking-tight text-gray-900 dark:text-white">{club.name}</h1>
-          <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-400 mt-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-500" />
-              <span className="font-medium">{club.fencerCount} Active Fencers</span>
+        <div className="flex items-center gap-6">
+          {club.logoUrl ? (
+            <img src={club.logoUrl} alt={`${club.name} logo`} className="w-24 h-24 rounded-full object-cover border-2 border-gray-100 dark:border-gray-800 shadow-sm" />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-3xl">
+              {club.shortName || club.name.substring(0, 2).toUpperCase()}
             </div>
-            <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              <span className="font-medium">{Math.round(club.totalPoints * 10) / 10} Total Points</span>
+          )}
+          <div>
+            <h1 className="text-4xl font-black tracking-tight text-gray-900 dark:text-white">{club.name}</h1>
+            
+            <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400 mt-2">
+              {club.location && (
+                <div className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {club.location}</div>
+              )}
+              {club.email && (
+                <div className="flex items-center gap-1"><Mail className="w-4 h-4" /> <a href={`mailto:${club.email}`} className="hover:text-blue-500">{club.email}</a></div>
+              )}
+              {club.website && (
+                <div className="flex items-center gap-1"><Globe className="w-4 h-4" /> <a href={club.website} target="_blank" rel="noreferrer" className="hover:text-blue-500">Website</a></div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-400 mt-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-500" />
+                <span className="font-medium">{club.fencerCount} Active Fencers</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                <span className="font-medium">{Math.round(club.totalPoints * 10) / 10} Total Points</span>
+              </div>
             </div>
           </div>
         </div>

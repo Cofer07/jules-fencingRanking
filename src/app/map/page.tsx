@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { MapPin } from 'lucide-react'
 
@@ -10,13 +11,18 @@ const ClubMap = dynamic(() => import('@/components/ClubMap'), {
 })
 
 export default function MapPage() {
-  // Hardcoded known clubs for demonstration
-  const clubs = [
-    { name: 'Damocles Fencing Club', lat: 45.9636, lng: -66.6431 }, // Fredericton area
-    { name: 'Fundy Fencing Club', lat: 45.2733, lng: -66.0633 }, // Saint John area
-    { name: 'UNB Fencing Club', lat: 45.9429, lng: -66.6416 }, // UNB
-    { name: 'Moncton Fencing Club', lat: 46.0878, lng: -64.7782 } // Moncton
-  ]
+  const [clubs, setClubs] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch('/api/clubs/list')
+      .then(res => res.json())
+      .then(data => {
+        // Filter out clubs without coordinates
+        const validClubs = data.filter((c: any) => c.lat && c.lng)
+        setClubs(validClubs)
+      })
+      .catch(console.error)
+  }, [])
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">

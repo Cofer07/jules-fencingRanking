@@ -46,8 +46,8 @@ export default function Navbar() {
           <Link href="/archives" className={`transition-colors ${isActive('/archives')}`}>
             Archives
           </Link>
-          <Link href="/admin" className={`transition-colors ${isActive('/admin')}`}>
-            Admin
+          <Link href="/add-results" className={`transition-colors ${isActive('/add-results')}`}>
+            Add Results
           </Link>
           <div className="pl-4 border-l border-gray-200 dark:border-gray-800">
             <ModeToggle />

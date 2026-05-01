@@ -1,15 +1,19 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { CalendarDays, MapPin, ChevronLeft } from 'lucide-react'
+import { CalendarDays, MapPin, ChevronLeft, Trash2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 export default function TournamentDetails() {
   const { id } = useParams()
+  const router = useRouter()
+  const { data: session } = useSession()
   const [tournament, setTournament] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetch(`/api/tournaments/${id}`)
@@ -21,14 +25,46 @@ export default function TournamentDetails() {
       .catch(() => setLoading(false))
   }, [id])
 
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this tournament? This will permanently remove all associated events and results and recalculate rankings.')) return
+
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/tournaments/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        router.push('/tournaments')
+      } else {
+        alert('Failed to delete tournament')
+        setIsDeleting(false)
+      }
+    } catch (error) {
+      console.error(error)
+      alert('Error deleting tournament')
+      setIsDeleting(false)
+    }
+  }
+
   if (loading) return <div className="p-8 text-center text-gray-500">Loading tournament details...</div>
   if (!tournament || tournament.error) return <div className="p-8 text-center text-red-500">Tournament not found.</div>
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <Link href="/tournaments" className="inline-flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-        <ChevronLeft className="w-4 h-4 mr-1" /> Back to Directory
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/tournaments" className="inline-flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+          <ChevronLeft className="w-4 h-4 mr-1" /> Back to Directory
+        </Link>
+        
+        {session?.user && (
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-950/50 dark:hover:bg-red-900/50 rounded-xl transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            {isDeleting ? 'Deleting...' : 'Delete Tournament'}
+          </button>
+        )}
+      </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border dark:border-gray-800 p-8 space-y-4">
         <h1 className="text-4xl font-black tracking-tight text-gray-900 dark:text-white">{tournament.name}</h1>
