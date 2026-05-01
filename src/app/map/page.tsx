@@ -12,10 +12,10 @@ const ClubMap = dynamic(() => import('@/components/ClubMap'), {
 export default function MapPage() {
   // Hardcoded known clubs for demonstration
   const clubs = [
-    { name: 'Damocles', lat: 45.9636, lng: -66.6431 }, // Fredericton area
-    { name: 'Fundy Fencing', lat: 45.2733, lng: -66.0633 }, // Saint John area
-    { name: 'UNB Fencing', lat: 45.9429, lng: -66.6416 }, // UNB
-    { name: 'Moncton Fencing', lat: 46.0878, lng: -64.7782 } // Moncton
+    { name: 'Damocles Fencing Club', lat: 45.9636, lng: -66.6431 }, // Fredericton area
+    { name: 'Fundy Fencing Club', lat: 45.2733, lng: -66.0633 }, // Saint John area
+    { name: 'UNB Fencing Club', lat: 45.9429, lng: -66.6416 }, // UNB
+    { name: 'Moncton Fencing Club', lat: 46.0878, lng: -64.7782 } // Moncton
   ]
 
   return (

@@ -19,6 +19,29 @@ const MINIMUM_FORCE: Record<string, number> = {
   'U15': 10,
 }
 
+// Map common CSV input variations to their unified names
+const CLUB_ALIASES: Record<string, string> = {
+  'dfc': 'Damocles Fencing Club',
+  'damocles': 'Damocles Fencing Club',
+  'damocles fencing club': 'Damocles Fencing Club',
+  'fundy': 'Fundy Fencing Club',
+  'fundy fencing': 'Fundy Fencing Club',
+  'fundy fencing club': 'Fundy Fencing Club',
+  'ffc': 'Fundy Fencing Club',
+  'unb': 'UNB Fencing Club',
+  'unb fencing': 'UNB Fencing Club',
+  'unb fencing club': 'UNB Fencing Club',
+  'moncton': 'Moncton Fencing Club',
+  'moncton fencing': 'Moncton Fencing Club',
+  'mfc': 'Moncton Fencing Club'
+}
+
+function normalizeClubName(rawName: string | null | undefined): string | null {
+  if (!rawName) return null;
+  const lower = rawName.trim().toLowerCase();
+  return CLUB_ALIASES[lower] || rawName.trim();
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
@@ -49,20 +72,33 @@ export async function POST(req: Request) {
 
     for (const r of results) {
       const fencerId = r.id || r['Fencer ID'] || `TMP-${Math.random().toString(36).substr(2, 6)}`
+      
+      // Normalize Gender to "M" or "F"
+      const rawGender = (r.gender || r['Gender'] || '').toUpperCase()
+      let normalizedGender = 'M' // default fallback
+      if (rawGender.startsWith('F') || rawGender.startsWith('W')) {
+        normalizedGender = 'F'
+      } else if (rawGender.startsWith('M')) {
+        normalizedGender = 'M'
+      }
+
+      const rawClub = r.club || r['Club'] || null
+      const normalizedClub = normalizeClubName(rawClub)
+
       const fencer = await prisma.fencer.upsert({
         where: { id: fencerId },
         update: {
           firstName: r.firstName || r['First Name'],
           lastName: r.lastName || r['Last Name'],
-          gender: r.gender || r['Gender'],
-          club: r.club || r['Club'] || null,
+          gender: normalizedGender,
+          club: normalizedClub,
         },
         create: {
           id: fencerId,
           firstName: r.firstName || r['First Name'],
           lastName: r.lastName || r['Last Name'],
-          gender: r.gender || r['Gender'],
-          club: r.club || r['Club'] || null,
+          gender: normalizedGender,
+          club: normalizedClub,
           tier: 'Bronze', // default
         }
       })

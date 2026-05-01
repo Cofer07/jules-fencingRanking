@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(req: Request, { params }: { params: { name: string } }) {
-  const decodedName = decodeURIComponent(params.name)
+import { NextRequest } from 'next/server'
+
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ name: string }> }
+) {
   try {
+    const params = await context.params
+    const decodedName = decodeURIComponent(params.name)
     const fencers = await prisma.fencer.findMany({
       where: { club: decodedName },
       include: {
