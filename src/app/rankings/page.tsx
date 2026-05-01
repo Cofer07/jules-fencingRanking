@@ -141,13 +141,17 @@ export default function RankingsPage() {
             </thead>
             <tbody className="divide-y dark:divide-gray-800">
               {clubs.map((c, idx) => (
-                <tr key={c.name} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <tr key={c.name} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                   <td className="p-4 font-bold text-gray-400 dark:text-gray-600">
                     {idx === 0 ? <span className="text-yellow-500">1</span> : 
                      idx === 1 ? <span className="text-gray-400">2</span> : 
                      idx === 2 ? <span className="text-amber-600">3</span> : idx + 1}
                   </td>
-                  <td className="p-4 font-bold text-gray-900 dark:text-gray-100 text-lg">{c.name}</td>
+                  <td className="p-4">
+                    <Link href={`/clubs/${encodeURIComponent(c.name)}`} className="font-bold text-gray-900 dark:text-gray-100 text-lg hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                      {c.name}
+                    </Link>
+                  </td>
                   <td className="p-4 text-right font-black text-blue-600 dark:text-blue-400 text-lg">{c.points}</td>
                 </tr>
               ))}

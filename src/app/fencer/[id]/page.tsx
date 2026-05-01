@@ -20,15 +20,18 @@ export default function FencerProfile() {
   if (!fencer) return <div className="p-8 text-center">Loading profile...</div>
 
   // Prepare chart data (cumulative points over time)
-  let cumulative = 0
-  const chartData = fencer.results.map((r: any) => {
-    cumulative += r.pointsEarned
-    return {
+  const chartData = [...fencer.results].reverse().reduce((acc: any[], r: any) => {
+    const prevCumulative = acc.length > 0 ? acc[acc.length - 1].points : 0
+    const newCumulative = prevCumulative + r.pointsEarned
+    
+    acc.push({
       date: format(new Date(r.event.tournament.date), 'MMM dd, yyyy'),
-      points: Math.round(cumulative * 10) / 10,
+      points: Math.round(newCumulative * 10) / 10,
       tournament: r.event.tournament.name
-    }
-  })
+    })
+    
+    return acc
+  }, [])
 
   const downloadBadge = async () => {
     if (badgeRef.current) {
@@ -44,20 +47,44 @@ export default function FencerProfile() {
     <div className="max-w-4xl mx-auto py-8 space-y-8">
       {/* Profile Header & Badge Section */}
       <div className="flex flex-col md:flex-row gap-8 items-start">
-        <div className="flex-1 bg-white p-6 rounded shadow">
-          <h1 className="text-3xl font-bold">{fencer.firstName} {fencer.lastName}</h1>
-          <p className="text-gray-500 text-lg mb-4">{fencer.id} • {fencer.gender === 'M' ? "Men's" : "Women's"}</p>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 p-4 rounded">
-              <span className="text-sm text-gray-500 block">Club</span>
-              <span className="font-semibold text-lg">{fencer.club || 'Unaffiliated'}</span>
-            </div>
-            <div className="bg-gray-50 p-4 rounded">
-              <span className="text-sm text-gray-500 block">Current Tier</span>
-              <span className="font-semibold text-lg">{fencer.tier}</span>
+        <div className="flex-1 space-y-4 w-full">
+          <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-6 rounded shadow">
+            <h1 className="text-3xl font-bold">{fencer.firstName} {fencer.lastName}</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">{fencer.id} • {fencer.gender === 'M' ? "Men's" : "Women's"}</p>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+                <span className="text-sm text-gray-500 dark:text-gray-400 block">Club</span>
+                <span className="font-semibold text-lg">{fencer.club || 'Unaffiliated'}</span>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
+                <span className="text-sm text-gray-500 dark:text-gray-400 block">Current Tier</span>
+                <span className="font-semibold text-lg">{fencer.tier}</span>
+              </div>
             </div>
           </div>
+          
+          {/* Advanced Stats Row */}
+          {fencer.stats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
+                <div className="text-2xl font-black text-yellow-500">{fencer.stats.gold}</div>
+                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gold Medals</div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
+                <div className="text-2xl font-black text-slate-400">{fencer.stats.silver}</div>
+                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Silver Medals</div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
+                <div className="text-2xl font-black text-orange-500">{fencer.stats.bronze}</div>
+                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bronze Medals</div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
+                <div className="text-2xl font-black text-blue-500">{fencer.stats.winRate}%</div>
+                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Medal Rate</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Downloadable Badge */}
@@ -75,7 +102,7 @@ export default function FencerProfile() {
             </div>
             <div className="flex justify-between items-end">
               <span className="font-mono text-sm opacity-80">{fencer.id}</span>
-              <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold backdrop-blur-sm">
+              <span className="bg-white dark:bg-gray-900 border dark:border-gray-800/20 px-3 py-1 rounded-full text-sm font-semibold backdrop-blur-sm">
                 {fencer.tier}
               </span>
             </div>
@@ -91,7 +118,7 @@ export default function FencerProfile() {
 
       {/* Performance Graph */}
       {chartData.length > 0 && (
-        <div className="bg-white p-6 rounded shadow">
+        <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-6 rounded shadow">
           <h2 className="text-xl font-bold mb-6">Performance Timeline (Cumulative Points)</h2>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -111,15 +138,15 @@ export default function FencerProfile() {
       )}
 
       {/* Tournament History */}
-      <div className="bg-white p-6 rounded shadow">
+      <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-6 rounded shadow">
         <h2 className="text-xl font-bold mb-4">Tournament History</h2>
         {fencer.results.length === 0 ? (
-          <p className="text-gray-500">No results recorded yet.</p>
+          <p className="text-gray-500 dark:text-gray-400">No results recorded yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-100 border-b">
+                <tr className="bg-gray-100 dark:bg-gray-800 border-b dark:border-gray-800">
                   <th className="p-3">Date</th>
                   <th className="p-3">Tournament</th>
                   <th className="p-3">Event</th>
@@ -129,8 +156,8 @@ export default function FencerProfile() {
               </thead>
               <tbody>
                 {[...fencer.results].reverse().map((r: any) => (
-                  <tr key={r.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3 text-gray-500">{format(new Date(r.event.tournament.date), 'MMM dd, yyyy')}</td>
+                  <tr key={r.id} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:bg-gray-800">
+                    <td className="p-3 text-gray-500 dark:text-gray-400">{format(new Date(r.event.tournament.date), 'MMM dd, yyyy')}</td>
                     <td className="p-3 font-medium">{r.event.tournament.name}</td>
                     <td className="p-3">{r.event.weapon} • {r.event.category}</td>
                     <td className="p-3 text-center font-bold">{r.placement}</td>

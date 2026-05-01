@@ -37,7 +37,13 @@ export async function GET(req: Request) {
 
     results.forEach(r => {
       // If event is mixed but looking for 'M' or 'F', we only sum if fencer's gender matches
-      if (r.event.gender === 'Mixed' && r.fencer.gender !== gender) {
+      // However, if we filter by 'Mixed', we don't care about fencer's gender
+      if (gender !== 'Mixed' && r.event.gender === 'Mixed' && r.fencer.gender !== gender) {
+        return
+      }
+
+      // If we're looking for 'M' or 'F' specifically, make sure the fencer is that gender
+      if (gender !== 'Mixed' && r.fencer.gender !== gender) {
         return
       }
 

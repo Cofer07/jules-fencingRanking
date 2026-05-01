@@ -124,6 +124,26 @@ export default function AdminDashboard() {
             {uploadStatus && (
               <div className={`p-4 rounded-lg text-sm font-medium ${uploadStatus.includes('Error') ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'}`}>
                 {uploadStatus}
+                {uploadStatus.includes('Success') && (
+                  <div className="mt-4 flex gap-4">
+                    <button 
+                      onClick={() => {
+                        setCreatedEventId('')
+                        setUploadStatus('')
+                        setCsvFile(null)
+                      }} 
+                      className="text-sm bg-white dark:bg-gray-800 border dark:border-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                    >
+                      Upload Another Event
+                    </button>
+                    <a 
+                      href={`/tournaments/${createdTournamentId}`} 
+                      className="text-sm bg-blue-600 text-white px-4 py-2 rounded shadow-sm hover:bg-blue-700 transition text-center"
+                    >
+                      View Tournament Directory
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>

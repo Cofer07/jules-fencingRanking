@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] text-center space-y-12 animate-in fade-in zoom-in duration-500">
       
-      <div className="bg-white p-6 rounded-3xl shadow-xl dark:shadow-none dark:bg-gray-800">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl dark:shadow-none">
         <Image 
           src="/FencingNB-Logo-FullColour.jpg" 
           alt="Fencing Escrime NB" 
