@@ -91,27 +91,75 @@ export default function FencerProfile() {
         <div className="flex flex-col items-center gap-4">
           <div 
             ref={badgeRef}
-            className="w-72 h-40 bg-gradient-to-br from-blue-900 to-blue-700 text-white rounded-xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between"
+            className={`w-80 h-112 rounded-2xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between text-white border-4 ${
+              fencer.tier === 'Diamond' ? 'bg-gradient-to-br from-cyan-300 via-blue-500 to-purple-600 border-cyan-200' :
+              fencer.tier === 'Platinum' ? 'bg-gradient-to-br from-slate-300 via-gray-400 to-slate-600 border-slate-200' :
+              fencer.tier === 'Gold' ? 'bg-gradient-to-br from-yellow-300 via-amber-500 to-orange-600 border-yellow-200' :
+              fencer.tier === 'Silver' ? 'bg-gradient-to-br from-gray-200 via-gray-400 to-gray-500 border-gray-100' :
+              fencer.tier === 'Bronze' ? 'bg-gradient-to-br from-orange-300 via-amber-600 to-yellow-800 border-orange-200' :
+              'bg-gradient-to-br from-gray-800 to-black border-gray-700'
+            }`}
           >
-            <div className="absolute top-0 right-0 p-4 opacity-20">
-              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
+            {/* Glossy Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+
+            {/* Header: Logo and Rank */}
+            <div className="flex justify-between items-start z-10">
+              <div className="bg-white p-1.5 rounded-lg shadow-sm">
+                <img src="/FencingNB-Logo-FullColour.jpg" alt="Fencing NB Logo" className="w-16 h-auto object-contain" />
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="font-black text-2xl uppercase tracking-widest drop-shadow-md">
+                  {fencer.tier || 'UNRANKED'}
+                </span>
+                <span className="font-mono text-xs opacity-90 drop-shadow-sm">{fencer.id}</span>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-xl">{fencer.firstName} {fencer.lastName}</h3>
-              <p className="text-blue-200 text-sm">{fencer.club || 'Maritime Fencer'}</p>
+
+            {/* Center: Name & Main Stat */}
+            <div className="flex flex-col items-center justify-center flex-1 z-10 py-4">
+              <h3 className="font-black text-3xl text-center uppercase tracking-tight drop-shadow-lg leading-none mb-2">
+                {fencer.firstName}<br/>{fencer.lastName}
+              </h3>
+              <p className="text-sm font-semibold opacity-90 tracking-widest uppercase mb-4 drop-shadow-sm">
+                {fencer.club || 'Maritime Fencer'}
+              </p>
+              
+              <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 w-full flex justify-between items-center border border-white/20">
+                <div className="text-center">
+                  <div className="text-xs uppercase tracking-widest opacity-80">Weapon</div>
+                  <div className="font-bold text-lg">{fencer.results[0]?.event.weapon || 'MIXED'}</div>
+                </div>
+                <div className="h-8 w-px bg-white/20" />
+                <div className="text-center">
+                  <div className="text-xs uppercase tracking-widest opacity-80">Category</div>
+                  <div className="font-bold text-lg">{fencer.gender === 'M' ? "MEN'S" : "WOMEN'S"}</div>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between items-end">
-              <span className="font-mono text-sm opacity-80">{fencer.id}</span>
-              <span className="bg-white dark:bg-gray-900 border dark:border-gray-800/20 px-3 py-1 rounded-full text-sm font-semibold backdrop-blur-sm">
-                {fencer.tier}
-              </span>
+
+            {/* Footer: Stats */}
+            <div className="grid grid-cols-3 gap-2 z-10">
+              <div className="bg-black/30 backdrop-blur-md rounded-lg p-2 text-center border border-white/10">
+                <div className="text-[10px] uppercase tracking-widest opacity-70">Gold</div>
+                <div className="font-black text-lg text-yellow-300">{fencer.stats?.gold || 0}</div>
+              </div>
+              <div className="bg-black/30 backdrop-blur-md rounded-lg p-2 text-center border border-white/10">
+                <div className="text-[10px] uppercase tracking-widest opacity-70">Medals</div>
+                <div className="font-black text-lg text-white">{(fencer.stats?.gold || 0) + (fencer.stats?.silver || 0) + (fencer.stats?.bronze || 0)}</div>
+              </div>
+              <div className="bg-black/30 backdrop-blur-md rounded-lg p-2 text-center border border-white/10">
+                <div className="text-[10px] uppercase tracking-widest opacity-70">Win %</div>
+                <div className="font-black text-lg text-cyan-300">{fencer.stats?.winRate || 0}%</div>
+              </div>
             </div>
           </div>
           <button 
             onClick={downloadBadge}
-            className="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition shadow"
+            className="w-full bg-blue-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-blue-700 transition shadow-lg flex justify-center items-center gap-2"
           >
-            Download Badge Image
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download for Socials
           </button>
         </div>
       </div>

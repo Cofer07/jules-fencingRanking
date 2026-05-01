@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { recalculateAllTiers } from '@/lib/rank-calculator'
 
 const TIER_FORCE: Record<string, number> = {
   'Diamond': 15,
@@ -158,6 +159,9 @@ export async function POST(req: Request) {
       })
       savedResults.push(result)
     }
+
+    // Recalculate percentiles dynamically now that new points exist
+    await recalculateAllTiers()
 
     return NextResponse.json({ success: true, count: savedResults.length })
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { recalculateAllTiers } from '@/lib/rank-calculator'
 
 import { NextRequest } from 'next/server'
 
@@ -46,6 +47,10 @@ export async function DELETE(
     await prisma.tournament.delete({
       where: { id: params.id }
     })
+
+    // Recalculate percentiles dynamically now that points were removed
+    await recalculateAllTiers()
+
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete tournament' }, { status: 500 })
