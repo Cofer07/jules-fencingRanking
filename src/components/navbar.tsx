@@ -37,8 +37,14 @@ export default function Navbar() {
           <Link href="/stats" className={`transition-colors ${isActive('/stats')}`}>
             Insights
           </Link>
+          <Link href="/map" className={`transition-colors ${isActive('/map')}`}>
+            Clubs Map
+          </Link>
           <Link href="/tournaments" className={`transition-colors ${isActive('/tournaments')}`}>
             Tournaments
+          </Link>
+          <Link href="/archives" className={`transition-colors ${isActive('/archives')}`}>
+            Archives
           </Link>
           <Link href="/admin" className={`transition-colors ${isActive('/admin')}`}>
             Admin
