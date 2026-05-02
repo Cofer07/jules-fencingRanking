@@ -16,6 +16,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
     }
 
+    const existingEvent = await prisma.event.findFirst({
+      where: {
+        tournamentId,
+        weapon,
+        category,
+        gender
+      }
+    })
+
+    if (existingEvent) {
+      return NextResponse.json({ 
+        error: 'Duplicate event exists',
+        existingId: existingEvent.id,
+        message: 'An event with this exact Weapon, Category, and Gender already exists for this tournament.'
+      }, { status: 409 })
+    }
+
     const event = await prisma.event.create({
       data: {
         tournamentId,

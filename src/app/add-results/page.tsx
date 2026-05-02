@@ -50,6 +50,15 @@ export default function AdminDashboard() {
       body: JSON.stringify({ tournamentId: createdTournamentId, weapon, category, gender })
     })
     const data = await res.json()
+    
+    if (res.status === 409) {
+      const overwrite = confirm(`${data.message}\n\nDo you want to upload results to the existing event instead?`)
+      if (overwrite) {
+        setCreatedEventId(data.existingId)
+      }
+      return
+    }
+
     if (data.id) setCreatedEventId(data.id)
   }
 
@@ -74,10 +83,16 @@ export default function AdminDashboard() {
         const clubsArr = Array.from(uniqueClubs)
         setDetectedClubs(clubsArr)
         
-        // Auto-match if exact match exists
+        // Auto-match if exact match exists (with better sanitization)
         const initialMapping: Record<string, string> = {}
         clubsArr.forEach(c => {
-          const exactMatch = dbClubs.find(dbC => dbC.name.toLowerCase() === c.toLowerCase() || dbC.shortName?.toLowerCase() === c.toLowerCase())
+          const cleanInput = c.trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+          const exactMatch = dbClubs.find(dbC => {
+            const cleanDbName = dbC.name.trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+            const cleanDbShort = (dbC.shortName || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+            return cleanDbName === cleanInput || cleanDbShort === cleanInput
+          })
+
           if (exactMatch) {
             initialMapping[c] = exactMatch.name
           } else {
@@ -92,7 +107,29 @@ export default function AdminDashboard() {
     })
   }
 
+  const handleDownloadTemplate = () => {
+    const headers = "Fencer ID,First Name,Last Name,Gender,Club,Final Placement\nC00-0000,John,Doe,M,Fundy Fencing Club,1"
+    const blob = new Blob([headers], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = "fencing_results_template.csv"
+    a.click()
+  }
+
   const handleFinalSubmit = async () => {
+    // Validate IDs
+    const invalidIds = csvRawData.filter(r => {
+      const id = (r.id || r['Fencer ID'] || '').trim()
+      if (!id) return true // Missing ID is invalid (we don't want temp ids anymore)
+      return !/^C\d{2}-\d{4,5}$/i.test(id) // Ensure format C##-#### or C##-#####
+    })
+
+    if (invalidIds.length > 0) {
+      const confirmProceed = confirm(`WARNING: Found ${invalidIds.length} fencer(s) with invalid or missing IDs (Expected format: C##-####). If you proceed, they will be given temporary system IDs which may cause duplicate profiles later. Are you sure you want to continue?`)
+      if (!confirmProceed) return
+    }
+
     setStep('processing')
     setUploadStatus('Uploading...')
 
@@ -118,13 +155,65 @@ export default function AdminDashboard() {
     }
   }
 
+  const [activeTab, setActiveTab] = useState<'upload' | 'merge'>('upload')
+  const [mergePrimary, setMergePrimary] = useState('')
+  const [mergeDuplicate, setMergeDuplicate] = useState('')
+  const [mergeStatus, setMergeStatus] = useState('')
+
+  const handleMerge = async () => {
+    if (!mergePrimary || !mergeDuplicate || mergePrimary === mergeDuplicate) {
+      setMergeStatus('Error: Please provide two distinct Fencer IDs.')
+      return
+    }
+
+    if (!confirm(`Are you SURE you want to merge ${mergeDuplicate} into ${mergePrimary}? This will permanently delete the duplicate profile.`)) return
+
+    setMergeStatus('Merging...')
+    try {
+      const res = await fetch('/api/fencer/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryId: mergePrimary, duplicateId: mergeDuplicate })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMergeStatus(`Success! ${data.message}`)
+        setMergePrimary('')
+        setMergeDuplicate('')
+      } else {
+        setMergeStatus(`Error: ${data.error}`)
+      }
+    } catch (e) {
+      setMergeStatus('Error: Network failed.')
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <section className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-2xl shadow-sm border dark:border-gray-800">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold w-8 h-8 rounded-full flex items-center justify-center">1</div>
-          <h2 className="text-xl font-bold">Create Tournament</h2>
-        </div>
+
+      {/* Tabs */}
+      <div className="bg-gray-100 dark:bg-gray-900 p-1 rounded-xl flex gap-1 shadow-inner border dark:border-gray-800 mb-6">
+        <button 
+          className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'upload' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
+          onClick={() => setActiveTab('upload')}
+        >
+          Upload Results
+        </button>
+        <button 
+          className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'merge' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
+          onClick={() => setActiveTab('merge')}
+        >
+          Merge Profiles
+        </button>
+      </div>
+
+      {activeTab === 'upload' && (
+        <>
+          <section className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-2xl shadow-sm border dark:border-gray-800">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold w-8 h-8 rounded-full flex items-center justify-center">1</div>
+              <h2 className="text-xl font-bold">Create Tournament</h2>
+            </div>
         <div className="space-y-4">
           <input className="bg-gray-50 dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 w-full outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" placeholder="Tournament Name" value={tournamentName} onChange={e => setTournamentName(e.target.value)} />
           <input className="bg-gray-50 dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 w-full outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" type="date" value={tournamentDate} onChange={e => setTournamentDate(e.target.value)} />
@@ -171,12 +260,20 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             {step === 'upload' && (
               <>
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={e => setCsvFile(e.target.files?.[0] || null)} 
-                  className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 transition-all cursor-pointer"
-                />
+                <div className="flex gap-4">
+                  <input 
+                    type="file" 
+                    accept=".csv" 
+                    onChange={e => setCsvFile(e.target.files?.[0] || null)} 
+                    className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 transition-all cursor-pointer bg-gray-50 dark:bg-gray-900 border dark:border-gray-800"
+                  />
+                  <button 
+                    onClick={handleDownloadTemplate}
+                    className="px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 rounded-lg whitespace-nowrap"
+                  >
+                    Download Template
+                  </button>
+                </div>
                 <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-sm" onClick={handleFileParse}>Verify & Match Clubs</button>
               </>
             )}
@@ -244,6 +341,37 @@ export default function AdminDashboard() {
           </div>
         </section>
       )}
+        </>
+      )}
+
+      {activeTab === 'merge' && (
+        <section className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-2xl shadow-sm border dark:border-gray-800 animate-in fade-in">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold">Merge Duplicate Fencers</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Combine a duplicate or temporary profile into the main fencer&apos;s profile. The duplicate will be permanently deleted.</p>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold mb-1">Primary Fencer ID (Keep this one)</label>
+              <input className="bg-gray-50 dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 w-full outline-none focus:ring-2 focus:ring-blue-500 transition-shadow font-mono" placeholder="e.g. C23-1234" value={mergePrimary} onChange={e => setMergePrimary(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1">Duplicate Fencer ID (Move results and delete)</label>
+              <input className="bg-gray-50 dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-3 w-full outline-none focus:ring-2 focus:ring-blue-500 transition-shadow font-mono" placeholder="e.g. TMP-abc12" value={mergeDuplicate} onChange={e => setMergeDuplicate(e.target.value)} />
+            </div>
+            
+            <button className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-sm mt-4" onClick={handleMerge}>Permanently Merge Profiles</button>
+            
+            {mergeStatus && (
+              <div className={`p-4 rounded-lg text-sm font-medium ${mergeStatus.includes('Error') ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'}`}>
+                {mergeStatus}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
     </div>
   )
 }
