@@ -60,7 +60,27 @@ export async function GET(req: Request) {
 
     const ranking = Object.values(aggregated).sort((a, b) => b.totalPoints - a.totalPoints)
 
-    return NextResponse.json(ranking)
+    const totalActive = ranking.length
+    const diamondLimit = Math.max(1, Math.floor(totalActive * 0.05))
+    const platinumLimit = Math.max(diamondLimit + 1, Math.floor(totalActive * 0.15))
+    const goldLimit = Math.max(platinumLimit + 1, Math.floor(totalActive * 0.35))
+    const silverLimit = Math.max(goldLimit + 1, Math.floor(totalActive * 0.65))
+
+    const computedRanking = ranking.map((r, idx) => {
+      let tier = 'Bronze'
+      if (idx < diamondLimit) tier = 'Diamond'
+      else if (idx < platinumLimit) tier = 'Platinum'
+      else if (idx < goldLimit) tier = 'Gold'
+      else if (idx < silverLimit) tier = 'Silver'
+
+      return {
+        ...r,
+        rank: idx + 1,
+        tier
+      }
+    })
+
+    return NextResponse.json(computedRanking)
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Failed to fetch rankings' }, { status: 500 })

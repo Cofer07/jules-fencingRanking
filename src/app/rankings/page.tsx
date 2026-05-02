@@ -100,13 +100,13 @@ export default function RankingsPage() {
                       <td className="p-4 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{r.fencer.club || '-'}</td>
                       <td className="p-4 text-center">
                         <span className={`px-3 py-1 text-xs rounded-full font-bold
-                          ${r.fencer.tier === 'Diamond' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300' : ''}
-                          ${r.fencer.tier === 'Platinum' ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300' : ''}
-                          ${r.fencer.tier === 'Gold' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
-                          ${r.fencer.tier === 'Silver' ? 'bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-300' : ''}
-                          ${r.fencer.tier === 'Bronze' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' : ''}
+                          ${r.tier === 'Diamond' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300' : ''}
+                          ${r.tier === 'Platinum' ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300' : ''}
+                          ${r.tier === 'Gold' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
+                          ${r.tier === 'Silver' ? 'bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-300' : ''}
+                          ${r.tier === 'Bronze' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' : ''}
                         `}>
-                          {r.fencer.tier}
+                          {r.tier}
                         </span>
                       </td>
                       <td className="p-4 text-right font-black text-blue-600 dark:text-blue-400">{r.totalPoints}</td>

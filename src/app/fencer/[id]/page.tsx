@@ -11,16 +11,58 @@ export default function FencerProfile() {
   const [fencer, setFencer] = useState<any>(null)
   const badgeRef = useRef<HTMLDivElement>(null)
 
+  // Filtering State
+  const [weapon, setWeapon] = useState('Epee')
+  const [category, setCategory] = useState('Senior')
+  const [leaderboardStats, setLeaderboardStats] = useState<{rank: number | null, tier: string | null}>({ rank: null, tier: null })
+
   useEffect(() => {
     fetch(`/api/fencer/${id}`)
       .then(res => res.json())
-      .then(data => setFencer(data))
+      .then(data => {
+        setFencer(data)
+        // Default weapon to what they fence most
+        if (data.results && data.results.length > 0) {
+          setWeapon(data.results[0].event.weapon)
+          setCategory(data.results[0].event.category)
+        }
+      })
   }, [id])
+
+  useEffect(() => {
+    if (fencer) {
+      fetch(`/api/rankings?weapon=${weapon}&gender=${fencer.gender}&category=${category}`)
+        .then(res => res.json())
+        .then(data => {
+          const myRankData = data.find((r: any) => r.fencer.id === fencer.id)
+          if (myRankData) {
+            setLeaderboardStats({ rank: myRankData.rank, tier: myRankData.tier })
+          } else {
+            setLeaderboardStats({ rank: null, tier: 'Unranked' })
+          }
+        })
+    }
+  }, [weapon, category, fencer])
 
   if (!fencer) return <div className="p-8 text-center text-gray-500">Loading profile...</div>
 
+  // Filter results by selected weapon and category
+  const filteredResults = fencer.results.filter(
+    (r: any) => r.event.weapon === weapon && r.event.category === category
+  )
+
+  // Compute dynamic stats for the filtered results
+  const dStats = { gold: 0, silver: 0, bronze: 0, totalMatches: filteredResults.length }
+  filteredResults.forEach((r: any) => {
+    if (r.placement === 1) dStats.gold++
+    else if (r.placement === 2) dStats.silver++
+    else if (r.placement === 3) dStats.bronze++
+  })
+  const dMedals = dStats.gold + dStats.silver + dStats.bronze
+  const dWinRate = dStats.totalMatches > 0 ? Math.round((dMedals / dStats.totalMatches) * 100) : 0
+
   // Prepare chart data (cumulative points over time)
-  const chartData = [...fencer.results].reverse().reduce((acc: any[], r: any) => {
+  const chartData = [...filteredResults].reverse().reduce((acc: any[], r: any) => {
     const prevCumulative = acc.length > 0 ? acc[acc.length - 1].points : 0
     const newCumulative = prevCumulative + r.pointsEarned
     
@@ -48,14 +90,43 @@ export default function FencerProfile() {
     }
   }
 
+  const currentTier = leaderboardStats.tier || 'Unranked'
+
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-8">
+    <div className="max-w-4xl mx-auto py-8 space-y-8 animate-in fade-in">
+      
+      {/* Filtering Toggles */}
+      <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded-xl shadow-sm flex flex-wrap gap-4">
+        <select className="bg-gray-50 dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-2.5 flex-1 outline-none font-bold text-gray-700 dark:text-gray-300" value={weapon} onChange={e => setWeapon(e.target.value)}>
+          <option>Epee</option>
+          <option>Foil</option>
+          <option>Sabre</option>
+        </select>
+        <select className="bg-gray-50 dark:bg-gray-950 border dark:border-gray-800 rounded-lg p-2.5 flex-1 outline-none font-bold text-gray-700 dark:text-gray-300" value={category} onChange={e => setCategory(e.target.value)}>
+          <option>Senior</option>
+          <option>Cadet</option>
+          <option>Junior</option>
+          <option>Veteran</option>
+          <option>U15</option>
+        </select>
+      </div>
+
       {/* Profile Header & Badge Section */}
       <div className="flex flex-col md:flex-row gap-8 items-start">
         <div className="flex-1 space-y-4 w-full">
           <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-6 rounded shadow">
-            <h1 className="text-3xl font-bold">{fencer.firstName} {fencer.lastName}</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">{fencer.id} • {fencer.gender === 'M' ? "Men's" : "Women's"}</p>
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h1 className="text-3xl font-bold">{fencer.firstName} {fencer.lastName}</h1>
+                <p className="text-gray-500 dark:text-gray-400 text-lg">{fencer.id} • {fencer.gender === 'M' ? "Men's" : "Women's"}</p>
+              </div>
+              {leaderboardStats.rank && (
+                <div className="text-right">
+                  <div className="text-xs uppercase tracking-widest text-gray-500 font-bold">Current Rank</div>
+                  <div className="text-3xl font-black text-blue-600 dark:text-blue-400">#{leaderboardStats.rank}</div>
+                </div>
+              )}
+            </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
@@ -64,32 +135,32 @@ export default function FencerProfile() {
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
                 <span className="text-sm text-gray-500 dark:text-gray-400 block">Current Tier</span>
-                <span className="font-semibold text-lg">{fencer.tier}</span>
+                <span className={`font-semibold text-lg ${currentTier === 'Diamond' ? 'text-cyan-500' : currentTier === 'Platinum' ? 'text-slate-500' : currentTier === 'Gold' ? 'text-yellow-500' : currentTier === 'Silver' ? 'text-gray-400' : currentTier === 'Bronze' ? 'text-orange-500' : 'text-gray-500'}`}>
+                  {currentTier}
+                </span>
               </div>
             </div>
           </div>
           
           {/* Advanced Stats Row */}
-          {fencer.stats && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
-                <div className="text-2xl font-black text-yellow-500">{fencer.stats.gold}</div>
-                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gold Medals</div>
-              </div>
-              <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
-                <div className="text-2xl font-black text-slate-400">{fencer.stats.silver}</div>
-                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Silver Medals</div>
-              </div>
-              <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
-                <div className="text-2xl font-black text-orange-500">{fencer.stats.bronze}</div>
-                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bronze Medals</div>
-              </div>
-              <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
-                <div className="text-2xl font-black text-blue-500">{fencer.stats.winRate}%</div>
-                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Medal Rate</div>
-              </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
+              <div className="text-2xl font-black text-yellow-500">{dStats.gold}</div>
+              <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Gold Medals</div>
             </div>
-          )}
+            <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
+              <div className="text-2xl font-black text-slate-400">{dStats.silver}</div>
+              <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Silver Medals</div>
+            </div>
+            <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
+              <div className="text-2xl font-black text-orange-500">{dStats.bronze}</div>
+              <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bronze Medals</div>
+            </div>
+            <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-4 rounded shadow text-center">
+              <div className="text-2xl font-black text-blue-500">{dWinRate}%</div>
+              <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Medal Rate</div>
+            </div>
+          </div>
         </div>
 
         {/* Downloadable Badge */}
@@ -97,11 +168,11 @@ export default function FencerProfile() {
           <div 
             ref={badgeRef}
             className={`w-80 h-112 rounded-2xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between text-white border-4 ${
-              fencer.tier === 'Diamond' ? 'bg-gradient-to-br from-cyan-300 via-blue-500 to-purple-600 border-cyan-200' :
-              fencer.tier === 'Platinum' ? 'bg-gradient-to-br from-slate-300 via-gray-400 to-slate-600 border-slate-200' :
-              fencer.tier === 'Gold' ? 'bg-gradient-to-br from-yellow-300 via-amber-500 to-orange-600 border-yellow-200' :
-              fencer.tier === 'Silver' ? 'bg-gradient-to-br from-gray-200 via-gray-400 to-gray-500 border-gray-100' :
-              fencer.tier === 'Bronze' ? 'bg-gradient-to-br from-orange-300 via-amber-600 to-yellow-800 border-orange-200' :
+              currentTier === 'Diamond' ? 'bg-gradient-to-br from-cyan-300 via-blue-500 to-purple-600 border-cyan-200' :
+              currentTier === 'Platinum' ? 'bg-gradient-to-br from-slate-300 via-gray-400 to-slate-600 border-slate-200' :
+              currentTier === 'Gold' ? 'bg-gradient-to-br from-yellow-300 via-amber-500 to-orange-600 border-yellow-200' :
+              currentTier === 'Silver' ? 'bg-gradient-to-br from-gray-200 via-gray-400 to-gray-500 border-gray-100' :
+              currentTier === 'Bronze' ? 'bg-gradient-to-br from-orange-300 via-amber-600 to-yellow-800 border-orange-200' :
               'bg-gradient-to-br from-gray-800 to-black border-gray-700'
             }`}
           >
@@ -115,7 +186,7 @@ export default function FencerProfile() {
               </div>
               <div className="flex flex-col items-end">
                 <span className="font-black text-2xl uppercase tracking-widest drop-shadow-md">
-                  {fencer.tier || 'UNRANKED'}
+                  {currentTier}
                 </span>
                 <span className="font-mono text-xs opacity-90 drop-shadow-sm">{fencer.id}</span>
               </div>
@@ -133,12 +204,12 @@ export default function FencerProfile() {
               <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 w-full flex justify-between items-center border border-white/20">
                 <div className="text-center">
                   <div className="text-xs uppercase tracking-widest opacity-80">Weapon</div>
-                  <div className="font-bold text-lg">{fencer.results[0]?.event.weapon || 'MIXED'}</div>
+                  <div className="font-bold text-lg">{weapon}</div>
                 </div>
                 <div className="h-8 w-px bg-white/20" />
                 <div className="text-center">
                   <div className="text-xs uppercase tracking-widest opacity-80">Category</div>
-                  <div className="font-bold text-lg">{fencer.gender === 'M' ? "MEN'S" : "WOMEN'S"}</div>
+                  <div className="font-bold text-lg">{category}</div>
                 </div>
               </div>
             </div>
@@ -147,15 +218,15 @@ export default function FencerProfile() {
             <div className="grid grid-cols-3 gap-2 z-10">
               <div className="bg-black/30 backdrop-blur-md rounded-lg p-2 text-center border border-white/10">
                 <div className="text-[10px] uppercase tracking-widest opacity-70">Gold</div>
-                <div className="font-black text-lg text-yellow-300">{fencer.stats?.gold || 0}</div>
+                <div className="font-black text-lg text-yellow-300">{dStats.gold}</div>
               </div>
               <div className="bg-black/30 backdrop-blur-md rounded-lg p-2 text-center border border-white/10">
                 <div className="text-[10px] uppercase tracking-widest opacity-70">Medals</div>
-                <div className="font-black text-lg text-white">{(fencer.stats?.gold || 0) + (fencer.stats?.silver || 0) + (fencer.stats?.bronze || 0)}</div>
+                <div className="font-black text-lg text-white">{dMedals}</div>
               </div>
               <div className="bg-black/30 backdrop-blur-md rounded-lg p-2 text-center border border-white/10">
                 <div className="text-[10px] uppercase tracking-widest opacity-70">Win %</div>
-                <div className="font-black text-lg text-cyan-300">{fencer.stats?.winRate || 0}%</div>
+                <div className="font-black text-lg text-cyan-300">{dWinRate}%</div>
               </div>
             </div>
           </div>
@@ -193,8 +264,8 @@ export default function FencerProfile() {
       {/* Tournament History */}
       <div className="bg-white dark:bg-gray-900 border dark:border-gray-800 p-6 rounded shadow">
         <h2 className="text-xl font-bold mb-4">Tournament History</h2>
-        {fencer.results.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400">No results recorded yet.</p>
+        {filteredResults.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">No results recorded for this category yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -208,7 +279,7 @@ export default function FencerProfile() {
                 </tr>
               </thead>
               <tbody>
-                {[...fencer.results].reverse().map((r: any) => (
+                {[...filteredResults].reverse().map((r: any) => (
                   <tr key={r.id} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:bg-gray-800">
                     <td className="p-3 text-gray-500 dark:text-gray-400">{format(new Date(r.event.tournament.date), 'MMM dd, yyyy')}</td>
                     <td className="p-3 font-medium">{r.event.tournament.name}</td>
