@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import html2canvas from 'html2canvas'
+import { toPng } from 'html-to-image'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { format } from 'date-fns'
 
@@ -17,7 +17,7 @@ export default function FencerProfile() {
       .then(data => setFencer(data))
   }, [id])
 
-  if (!fencer) return <div className="p-8 text-center">Loading profile...</div>
+  if (!fencer) return <div className="p-8 text-center text-gray-500">Loading profile...</div>
 
   // Prepare chart data (cumulative points over time)
   const chartData = [...fencer.results].reverse().reduce((acc: any[], r: any) => {
@@ -35,11 +35,16 @@ export default function FencerProfile() {
 
   const downloadBadge = async () => {
     if (badgeRef.current) {
-      const canvas = await html2canvas(badgeRef.current, { scale: 2 })
-      const link = document.createElement('a')
-      link.download = `${fencer.firstName}-${fencer.lastName}-badge.png`
-      link.href = canvas.toDataURL()
-      link.click()
+      try {
+        const dataUrl = await toPng(badgeRef.current, { cacheBust: true, pixelRatio: 2 })
+        const link = document.createElement('a')
+        link.download = `${fencer.firstName}-${fencer.lastName}-badge.png`
+        link.href = dataUrl
+        link.click()
+      } catch (err) {
+        console.error('Failed to generate image', err)
+        alert('Failed to download badge. Please try again.')
+      }
     }
   }
 
